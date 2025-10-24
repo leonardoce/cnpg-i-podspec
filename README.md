@@ -1,66 +1,83 @@
 # CNPG-I Hello World Plugin
 
-A [CNPG-I](https://github.com/cloudnative-pg/cnpg-i) plugin to add
-user-defined labels, annotations and a specific `pause` sidecar
-to the pods of
-[CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg/) clusters.
-
-This project serves as an introductory guide to bootstrapping
-a [CNPG-I](https://github.com/cloudnative-pg/cnpg-i) plugin and leveraging
-lifecycle hooks within a development environment. While similar results can be
-achieved through simpler methods such as mutating webhooks or CNPG's built-in
-features, this project is specifically designed to familiarize developers with
-the plugin workflow. By understanding how lifecycle hooks interact with other
-interfaces, developers can gain a deeper insight into implementing complex
-resource changes in real-world applications.
+A [CNPG-I](https://github.com/cloudnative-pg/cnpg-i) plugin to easily
+patch the Pods created by CNPG using a PodTemplate object.
 
 This plugin uses
 the [pluginhelper](https://github.com/cloudnative-pg/cnpg-i-machinery/tree/main/pkg/pluginhelper)
 from [`cnpg-i-machinery`](https://github.com/cloudnative-pg/cnpg-i-machinery) to
 simplify the plugin's implementation.
 
+## Show me how it works
+
+``` yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster-example
+  namespace: default
+spec:
+  instances: 3
+
+  plugins:
+  - name: cnpg-i-podspec.cloudnative-pg.io
+    parameters:
+      instanceTemplateName: instance-pod
+      instanceTemplateNamespace: cnpg-system
+
+  storage:
+    size: 1Gi
+---
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  namespace: cnpg-system
+  name: instance-pod
+template:
+  metadata:
+    annotations:
+      test: tests
+      tooth: teeth
+  spec:
+    containers:
+      - name: postgres
+        image: ghcr.io/cloudnative-pg/postgresql:18.0-system-trixie
+        env:
+          - name: CONTAINER_NAME
+            value: postgres
+
+```
+
 ## Running the plugin
 
-To see the plugin in execution, you need to have a Kubernetes cluster running
-(we'll use [Kind](https://kind.sigs.k8s.io)) and the
-[CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg/) operator
-installed. The plugin also requires certificates to communicate with the
-operator, hence we are also installing [cert-manager](https://cert-manager.io/)
-to manage them.
+To install it, start with
+[CloudNativePG](https://github.com/cloudnative-pg/cloudnative-pg)
+checkout and create a development environment with:
 
 ``` shell
-kind create cluster --name cnpg-i-podspec
-# Choose the latest version of CloudNativePG (at least 1.24)
-kubectl apply --server-side -f \
-  https://github.com/cloudnative-pg/cloudnative-pg/releases/download/vX.Y.Z/cnpg-X.Y.Z.yaml
+cloudnative-pg $ ./hack/setup-cluster -n 1 -r create load deploy
+...
+```
+
+After that you need to install Cert-Manager:
+
+```shell
 # Choose the latest version of cert-manager
 kubectl apply -f \
   https://github.com/cert-manager/cert-manager/releases/download/vX.Y.Z/cert-manager.yaml
 ```
 
-Then install the plugin by applying the manifest.
-The easiest way to obtain the manifest may be as an artifact created by the
-[`release-please` workflow](https://github.com/leonardoce/cnpg-i-podspec/actions/workflows/release-please.yml).
-You can download it and apply it locally:
+Then install the plugin by compiling it:
 
-``` shell
-kubectl apply -f LOCAL-FOLDER/manifest.yaml
+```
+cnpg-i-podspec $ task local-kind-deploy
 ```
 
-<!-- TODO: reevaluate on release and set release-please to automatically update it-->
+Finally, create a cluster resource to see the plugin in action.
 
-Finally, create a cluster resource to see the plugin in action. There are three
-examples in the `doc/examples` directory:
-
-1. [Cluster with labels and annotations](doc/examples/cluster-example.yaml):
-   adds the defined labels and annotations to the pods. Showcases the plugin
-   capability of altering the lifecycle of the CloudNativePG resources.
-2. [Cluster with no parameters](doc/examples/cluster-example-no-parameters.yaml):
-   defaults the plugin settings of the cluster. Showcases the plugin capability
-   of altering the defaulting webhook behavior.
-3. [Cluster with wrong parameters](doc/examples/cluster-example-with-mistake.yaml):
-   includes an error in the configuration. Showcases the plugin capability of
-   validating its own configuration.
+```
+cnpg-i-podspec $ kubectl apply -f doc/examples/cluster-example.yaml
+```
 
 ## Plugin development
 
