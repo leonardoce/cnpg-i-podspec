@@ -1,0 +1,8 @@
+bin/
+dist/
+.env
+.vscode/
+.idea/
+.task/
+manifest.yaml
+*~

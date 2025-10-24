@@ -1,0 +1,34 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster-example
+  namespace: default
+spec:
+  instances: 3
+
+  plugins:
+  - name: cnpg-i-podspec.cloudnative-pg.io
+    parameters:
+      instanceTemplateName: instance-pod
+      instanceTemplateNamespace: cnpg-system
+
+  storage:
+    size: 1Gi
+---
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  namespace: cnpg-system
+  name: instance-pod
+template:
+  metadata:
+    annotations:
+      test: tests
+      tooth: teeth
+  spec:
+    containers:
+      - name: postgres
+        image: ghcr.io/cloudnative-pg/postgresql:18.0-system-trixie
+        env:
+          - name: CONTAINER_NAME
+            value: postgres

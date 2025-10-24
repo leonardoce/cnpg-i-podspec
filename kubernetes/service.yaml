@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: podspec
+    cnpg.io/pluginName: cnpg-i-podspec.cloudnative-pg.io
+  annotations:
+    cnpg.io/pluginClientSecret: podspec-client-tls
+    cnpg.io/pluginServerSecret: podspec-server-tls
+    cnpg.io/pluginPort: "9090"
+  name: podspec
+spec:
+  ports:
+  - port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: podspec
